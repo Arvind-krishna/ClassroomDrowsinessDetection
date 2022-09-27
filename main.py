@@ -20,11 +20,12 @@ import cv2
 ###################################################################### Operating Code  ######################################################################
 
 
-if "counter" not in st.session_state:
-    st.session_state.counter = 0
+def fcnt(f=0):
+  while True:
+    yield f
+    f+=1
 
-
-
+f=fcnt()
 thresh = 0.25
 minframes = 20
 
@@ -37,7 +38,7 @@ predict = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")# Dat fil
 
 
 def framefn(frame):
-
+    global f
     img = frame.to_image()
     img.save("temp.jpg")
     img=cv2.imread("temp.jpg")
@@ -60,18 +61,19 @@ def framefn(frame):
         cv2.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)
         cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
         cv2.drawContours(frame, [mHull], -1, (0, 255, 0), 1)
-
-        #if ear < thresh:
-            #st.session_state.counter+=1
-        #else:
-            #st.session_state.counter = 0
-
+        x=0
         if ear < thresh:
-            cv2.putText(frame, "    ALERT!, DROWSINESS DETECTED!", (10, 30),
+            x=f.__next__()
+        else:
+            f=fcnt()
+
+        if x > minframes:
+            cv2.putText(frame,"    ALERT!, DROWSINESS DETECTED!", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
 
     Image.fromarray(frame).save("temp.jpg")
     img = Image.open("temp.jpg")
+    
     return vf.from_image(img)
 
 
@@ -107,6 +109,7 @@ st.title("Student Drowsiness Detection")
 
 #Banner Image
 st.image("image.jpg")
+
 
 #Streamer Element
 webrtc_streamer(key="opencv-filter",mode=WebRtcMode.SENDRECV,video_frame_callback=framefn,async_processing=True,media_stream_constraints={"video": True, "audio": False},rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
